@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% import "_macros.html" as m with context %}
+{% block content %}
+<section class="card">
+  <!-- Search + filter + sort (a GET form, so the filters stay in the address bar) -->
+  <form method="get" class="filters">
+    <input type="text" name="q" value="{{ f.q }}" placeholder="🔍 Search title, description or subject">
+    <select name="status"><option value="">All statuses</option>
+      {% for s in STATUSES %}<option {{ 'selected' if f.status == s }}>{{ s }}</option>{% endfor %}</select>
+    <select name="subject"><option value="">All subjects</option>
+      {% for s in subject_list %}<option value="{{ s.subject_id }}" {{ 'selected' if f.subject == s.subject_id|string }}>{{ s.subject_name }}</option>{% endfor %}</select>
+    <select name="type"><option value="">All types</option>
+      {% for t in TYPES %}<option {{ 'selected' if f.type == t }}>{{ t }}</option>{% endfor %}</select>
+    <select name="priority"><option value="">All priorities</option>
+      {% for p in PRIORITIES %}<option {{ 'selected' if f.priority == p }}>{{ p }}</option>{% endfor %}</select>
+    <select name="sort">
+      {% for key, label in [('deadline','Sort: Deadline'), ('priority','Sort: Priority'), ('newest','Sort: Newest')] %}
+        <option value="{{ key }}" {{ 'selected' if f.sort == key }}>{{ label }}</option>{% endfor %}</select>
+    <button class="btn">Apply</button>
+    <a class="btn btn-light" href="{{ url_for('tasks') }}" style="text-decoration:none">Clear</a>
+  </form>
+
+  <div class="toolbar">
+    <p class="legend"><span class="dot overdue"></span>Overdue <span class="dot soon"></span>Due in 3 days <span class="dot done"></span>Completed · {{ task_list|length }} task(s) shown</p>
+    <button class="btn" data-modal="taskModal" data-heading="Add Task" data-action="{{ url_for('add_task') }}"
+            {% if not subject_list %}disabled title="Add a subject first"{% endif %}>{{ icon('plus', 16) }} Add Task</button>
+  </div>
+  {% if not subject_list %}
+    <p class="alert alert-warning">You need at least one subject before adding tasks. <a href="{{ url_for('subjects') }}">Go to My Subjects</a></p>
+  {% endif %}
+  {{ m.task_table(task_list, edit=true) }}
+</section>
+
+<!-- Add / Edit task popup (the same form is used for both) -->
+<div class="modal" id="taskModal"><div class="modal-box">
+  <h2>Add Task</h2>
+  <form method="post">
+    <label>Task title *</label><input type="text" name="task_title" required maxlength="100">
+    <label>Description</label><textarea name="task_description" rows="3" maxlength="500"></textarea>
+    <div class="two-col">
+      <div><label>Subject *</label>
+        <select name="subject_id" required><option value="">-- Select --</option>
+          {% for s in subject_list %}<option value="{{ s.subject_id }}">{{ s.subject_name }}</option>{% endfor %}</select></div>
+      <div><label>Task type</label><select name="task_type">{% for t in TYPES %}<option>{{ t }}</option>{% endfor %}</select></div>
+      <div><label>Deadline *</label><input type="date" name="deadline" required></div>
+      <div><label>Priority</label><select name="priority">{% for p in PRIORITIES %}<option {{ 'selected' if p == 'Medium' }}>{{ p }}</option>{% endfor %}</select></div>
+    </div>
+    <label>Status</label><select name="status">{% for s in STATUSES %}<option>{{ s }}</option>{% endfor %}</select>
+    <div class="modal-actions"><button type="button" class="btn btn-light" data-close>Cancel</button><button class="btn">Save Task</button></div>
+  </form>
+</div></div>
+{% endblock %}

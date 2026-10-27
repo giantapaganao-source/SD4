@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block content %}
+<section class="card">
+  <h3>Add a Subject</h3>
+  <form method="post" action="{{ url_for('add_subject') }}" class="inline-form">
+    <input type="text" name="subject_name" placeholder="Subject name *" required maxlength="80">
+    <input type="text" name="description" placeholder="Description (optional)" maxlength="200">
+    <button class="btn">{{ icon('plus', 16) }} Add Subject</button>
+  </form>
+</section>
+
+<section class="card">
+  <h3>All Subjects</h3>
+  {% if subject_list %}
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Subject</th><th>Description</th><th>Tasks</th><th>Progress</th><th>Actions</th></tr></thead>
+    <tbody>
+    {% for s in subject_list %}
+      <tr>
+        <td><strong>{{ s.subject_name }}</strong></td>
+        <td>{{ s.description or '—' }}</td>
+        <td>{{ s.done }}/{{ s.total }} done</td>
+        <td style="min-width:120px"><div class="progress small"><div class="progress-bar" style="width: {{ (s.done / s.total * 100)|round if s.total else 0 }}%"></div></div></td>
+        <td class="actions">
+          <button type="button" class="btn btn-sm btn-light" data-modal="subjectModal" data-heading="Edit Subject"
+            data-action="{{ url_for('edit_subject', subject_id=s.subject_id) }}"
+            data-subject_name="{{ s.subject_name }}" data-description="{{ s.description or '' }}">{{ icon('pencil', 14) }} Edit</button>
+          <form method="post" action="{{ url_for('delete_subject', subject_id=s.subject_id) }}"
+                onsubmit="return confirm('Delete this subject? (Subjects that still have tasks cannot be deleted.)')">
+            <button class="btn btn-sm btn-danger">{{ icon('trash', 14) }} Delete</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+    <p class="empty">No subjects yet. Add your first one above!</p>
+  {% endif %}
+</section>
+
+<!-- Edit subject popup -->
+<div class="modal" id="subjectModal"><div class="modal-box">
+  <h2>Edit Subject</h2>
+  <form method="post">
+    <label>Subject name *</label><input type="text" name="subject_name" required maxlength="80">
+    <label>Description</label><input type="text" name="description" maxlength="200">
+    <div class="modal-actions"><button type="button" class="btn btn-light" data-close>Cancel</button><button class="btn">Save</button></div>
+  </form>
+</div></div>
+{% endblock %}

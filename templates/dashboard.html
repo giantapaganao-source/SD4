@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% import "_macros.html" as m with context %}
+{% block content %}
+<section class="stats">
+  <div class="card stat"><span class="icon">{{ icon('book', 26) }}</span><div><h2>{{ subjects }}</h2><p>Subjects</p></div></div>
+  <div class="card stat"><span class="icon">{{ icon('file', 26) }}</span><div><h2>{{ total }}</h2><p>Total Tasks</p></div></div>
+  <div class="card stat"><span class="icon">{{ icon('check', 26) }}</span><div><h2>{{ done }}</h2><p>Completed</p></div></div>
+  <div class="card stat"><span class="icon">{{ icon('zap', 26) }}</span><div><h2>{{ ongoing }}</h2><p>Ongoing</p></div></div>
+  <div class="card stat"><span class="icon">{{ icon('clock', 26) }}</span><div><h2>{{ pending }}</h2><p>Pending</p></div></div>
+</section>
+
+<section class="grid-2">
+  <div>
+    <div class="card">
+      <h3>Task Progress</h3>
+      <div class="progress"><div class="progress-bar" style="width: {{ percent }}%">{{ percent }}%</div></div>
+      <p class="muted">{{ done }} of {{ total }} tasks completed</p>
+    </div>
+    <div class="card">
+      <h3>Upcoming Study Sessions</h3>
+      {% for s in sessions %}
+        <div class="deadline {{ 'd-soon' if s.study_date == today }}">
+          <div><strong>{{ s.topic }}</strong><small>{{ s.subject_name }}</small></div>
+          <span>{{ 'Today' if s.study_date == today else s.study_date }}<br><small class="time">{{ s.start_time }}–{{ s.end_time }}</small></span>
+        </div>
+      {% else %}
+        <p class="empty">No study sessions planned. <a href="{{ url_for('schedule') }}">Plan one</a></p>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="card">
+    <h3>Upcoming Deadlines</h3>
+    {% for t in upcoming %}
+      {% set state = 'overdue' if t.deadline < today else ('soon' if t.deadline <= soon else 'ok') %}
+      <div class="deadline d-{{ state }}">
+        <div><strong>{{ t.task_title }}</strong><small>{{ t.subject_name }} · {{ t.task_type }} · {{ t.status }}</small></div>
+        <span>{{ t.deadline }}{% if state == 'overdue' %} · Overdue{% endif %}</span>
+      </div>
+    {% else %}
+      <p class="empty">No upcoming deadlines. 🎉</p>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="card">
+  <h3>Recent Tasks</h3>
+  {{ m.task_table(recent) }}
+</section>
+{% endblock %}

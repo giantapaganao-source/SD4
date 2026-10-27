@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block content %}
+<section class="card">
+  <h3>Finished Tasks</h3>
+  {{ m.task_table(task_list) }}
+</section>
+{% endblock %}

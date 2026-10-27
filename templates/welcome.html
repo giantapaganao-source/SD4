@@ -1,0 +1,70 @@
+{% from "_icons.html" import icon %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome - StudyBuddy</title>
+  <link rel="icon" href="{{ url_for('static', filename='img/logo.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="welcome">
+<header class="w-nav">
+  <a class="w-brand" href="{{ url_for('welcome') }}"><img src="{{ url_for('static', filename='img/logo.svg') }}" alt="" width="40" height="40"> StudyBuddy</a>
+  <a class="btn-pill ghost" href="{{ url_for('dashboard') }}">{{ icon('home', 16) }} Dashboard</a>
+</header>
+
+<!-- Hero -->
+<section class="w-hero">
+  <span class="w-tag">{{ icon('cap', 16) }} Your personal study planner</span>
+  <h1>Plan your studies.<br><span>Not your stress.</span></h1>
+  <p>Keep every subject, assignment, quiz and exam in one place, see what is due next, and plan your study time.</p>
+  <div class="w-cta">
+    <a class="btn-pill" href="{{ url_for('subjects') }}">Get started {{ icon('arrow', 18) }}</a>
+    <a class="btn-pill ghost" href="{{ url_for('dashboard') }}">View dashboard</a>
+  </div>
+  <div class="w-tiles">
+    <div class="tile t1">{{ icon('book', 34) }}</div><div class="tile t2">{{ icon('cap', 34) }}</div>
+    <div class="tile t3">{{ icon('pencil', 34) }}</div><div class="tile t4">{{ icon('calendar', 34) }}</div>
+    <div class="tile t5">{{ icon('check', 34) }}</div><div class="tile t6">{{ icon('bulb', 34) }}</div>
+  </div>
+</section>
+
+<!-- Steps -->
+<section class="w-section">
+  <p class="w-kicker">How it works</p>
+  <h2>Just three simple steps</h2>
+  <div class="w-steps">
+    <div class="w-card"><span class="num">1</span><div class="w-ic">{{ icon('book', 26) }}</div><h3>Add your subjects</h3>
+      <p>List the subjects you are taking this term.</p>
+      <a class="btn-pill small" href="{{ url_for('subjects') }}">Add subjects {{ icon('arrow', 16) }}</a></div>
+    <div class="w-card"><span class="num">2</span><div class="w-ic">{{ icon('file', 26) }}</div><h3>Add tasks and deadlines</h3>
+      <p>Save assignments, projects, quizzes and exams with due dates.</p>
+      <a class="btn-pill small" href="{{ url_for('tasks') }}">Add tasks {{ icon('arrow', 16) }}</a></div>
+    <div class="w-card"><span class="num">3</span><div class="w-ic">{{ icon('calendar', 26) }}</div><h3>Plan and track</h3>
+      <p>Schedule study sessions and watch your progress grow.</p>
+      <a class="btn-pill small" href="{{ url_for('schedule') }}">Plan study time {{ icon('arrow', 16) }}</a></div>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="w-section alt">
+  <p class="w-kicker">Features</p>
+  <h2>Everything a student needs</h2>
+  <div class="w-features">
+    <div class="w-feat">{{ icon('book', 22) }}<div><h4>Subjects</h4><p>Organize tasks by subject.</p></div></div>
+    <div class="w-feat">{{ icon('clock', 22) }}<div><h4>Deadlines</h4><p>Overdue and due-soon tasks are highlighted.</p></div></div>
+    <div class="w-feat">{{ icon('zap', 22) }}<div><h4>Task status</h4><p>Pending, Ongoing or Completed.</p></div></div>
+    <div class="w-feat">{{ icon('calendar', 22) }}<div><h4>Study schedule</h4><p>Plan study sessions by date and time.</p></div></div>
+    <div class="w-feat">{{ icon('search', 22) }}<div><h4>Search and filter</h4><p>Find any task in seconds.</p></div></div>
+    <div class="w-feat">{{ icon('check', 22) }}<div><h4>Progress</h4><p>See completed and pending totals.</p></div></div>
+  </div>
+</section>
+
+<section class="w-final">
+  <h2>Ready to get organized?</h2>
+  <a class="btn-pill light" href="{{ url_for('subjects') }}">Get started {{ icon('arrow', 18) }}</a>
+</section>
+<footer class="w-foot">StudyBuddy · Personal Study Planner and Task Tracker</footer>
+</body>
+</html>

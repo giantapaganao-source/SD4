@@ -1,0 +1,40 @@
+{% from "_icons.html" import icon %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title }} - StudyBuddy</title>
+  <link rel="icon" href="{{ url_for('static', filename='img/logo.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="layout">
+  <!-- Left sidebar -->
+  <aside class="sidebar">
+    <a class="logo" href="{{ url_for('home') }}"><img src="{{ url_for('static', filename='img/logo.svg') }}" alt="" width="36" height="36"> StudyBuddy</a>
+    <nav>
+      {% for ep, ic, label in [('dashboard','home','Dashboard'), ('subjects','book','My Subjects'),
+                               ('tasks','file','My Tasks'), ('schedule','calendar','Study Schedule'),
+                               ('completed','check','Completed Tasks')] %}
+        <a href="{{ url_for(ep) }}" class="{{ 'active' if request.endpoint == ep }}">{{ icon(ic, 18) }} {{ label }}</a>
+      {% endfor %}
+    </nav>
+    <a class="side-cta" href="{{ url_for('welcome') }}">{{ icon('cap', 18) }} Get Started Guide</a>
+  </aside>
+
+  <main class="main">
+    <header class="topbar"><h1>{{ title }}</h1><span class="today">{{ icon('calendar', 16) }} {{ today }}</span></header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+</div>
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
