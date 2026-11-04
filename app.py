@@ -1,11 +1,15 @@
 # app.py - StudyBuddy main Flask application and routes
 from datetime import date, datetime, timedelta
+import os
 import sqlite3
 from flask import Flask, g, render_template, request, redirect, url_for, flash, session
-from database import get_db, init_db
+from database import get_db, init_db, is_integrity_error
 
 app = Flask(__name__)
-app.secret_key = "studybuddy-change-this-key"  # needed for flash messages
+secret_key = os.environ.get("SECRET_KEY")
+if os.environ.get("VERCEL") and not secret_key:
+    raise RuntimeError("SECRET_KEY must be configured in the Vercel project.")
+app.secret_key = secret_key or "studybuddy-change-this-key"
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=365)
 init_db()  # create database + tables on first run
 
@@ -99,7 +103,10 @@ def register():
         conn = get_db()
         try:
             cursor = conn.execute("INSERT INTO users (nickname) VALUES (?)", (nickname,))
-        except sqlite3.IntegrityError:
+        except (sqlite3.IntegrityError, ValueError) as error:
+            if not is_integrity_error(error):
+                conn.close()
+                raise
             if conn.execute("SELECT 1 FROM users WHERE nickname = ? COLLATE NOCASE",
                             (nickname,)).fetchone():
                 flash("That nickname is already in use. Choose another one.", "danger")
