@@ -24,7 +24,20 @@
   </aside>
 
   <main class="main">
-    <header class="topbar"><h1>{{ title }}</h1><span class="today">{{ icon('calendar', 16) }} {{ today }}{% if nickname %} · {{ nickname }}{% endif %}</span></header>
+    <header class="topbar">
+      <h1>{{ title }}</h1>
+      <div class="topbar-actions">
+        <span class="today">{{ icon('calendar', 16) }} {{ today }}{% if nickname %} · {{ nickname }}{% endif %}</span>
+        <button class="btn btn-sm" id="enableNotifications" type="button" hidden>Enable notifications</button>
+        <span class="notification-status" id="notificationStatus" aria-live="polite"></span>
+      </div>
+    </header>
+
+    <section class="reminder-panel" id="reminderPanel" data-url="{{ url_for('reminders') }}"
+             role="status" aria-live="polite" hidden>
+      <div class="reminder-heading"><strong>Reminders</strong></div>
+      <ul id="reminderList"></ul>
+    </section>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% for category, message in messages %}

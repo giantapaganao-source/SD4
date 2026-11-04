@@ -13,6 +13,8 @@
         <td class="time">{{ r.start_time }} – {{ r.end_time }}</td>
         <td>{{ r.subject_name }}</td><td><strong>{{ r.topic }}</strong></td><td>{{ r.notes or '—' }}</td>
         <td class="actions">
+          <button type="button" class="btn btn-sm btn-light" data-modal="shareSessionModal" data-heading="Share Study Session"
+            data-action="{{ url_for('share_session', session_id=r.session_id) }}">{{ icon('share', 14) }} Share</button>
           <button type="button" class="btn btn-sm btn-light" data-modal="sessionModal" data-heading="Edit Study Session"
             data-action="{{ url_for('edit_session', session_id=r.session_id) }}" data-subject_id="{{ r.subject_id }}"
             data-topic="{{ r.topic }}" data-study_date="{{ r.study_date }}" data-start_time="{{ r.start_time }}"
@@ -54,6 +56,16 @@
     </div>
     <label>Notes</label><input type="text" name="notes" maxlength="200">
     <div class="modal-actions"><button type="button" class="btn btn-light" data-close>Cancel</button><button class="btn">Save</button></div>
+  </form>
+</div></div>
+
+<div class="modal" id="shareSessionModal"><div class="modal-box">
+  <h2>Share Study Session</h2>
+  <p class="muted">This creates a separate copy in the recipient's planner. Their nickname must already exist.</p>
+  <form method="post">
+    <label for="shareSessionNickname">Recipient nickname</label>
+    <input id="shareSessionNickname" type="text" name="nickname" maxlength="30" required autocomplete="off">
+    <div class="modal-actions"><button type="button" class="btn btn-light" data-close>Cancel</button><button class="btn">Share Session</button></div>
   </form>
 </div></div>
 {% endblock %}

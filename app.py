@@ -1,8 +1,8 @@
 # app.py - StudyBuddy main Flask application and routes
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta, timezone
 import os
 import sqlite3
-from flask import Flask, g, render_template, request, redirect, url_for, flash, session
+from flask import Flask, g, jsonify, render_template, request, redirect, url_for, flash, session
 from database import get_db, init_db, is_integrity_error
 
 app = Flask(__name__)
@@ -13,6 +13,7 @@ app.secret_key = secret_key or "studybuddy-change-this-key"
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=365)
 init_db()  # create database + tables on first run
 
+APP_TIMEZONE = timezone(timedelta(hours=8))
 STATUSES = ["Pending", "Ongoing", "Completed"]
 PRIORITIES = ["Low", "Medium", "High"]
 TYPES = ["Assignment", "Project", "Quiz", "Exam", "Other"]
@@ -25,8 +26,9 @@ TASK_SELECT = ("SELECT t.*, s.subject_name FROM tasks t "
 @app.context_processor
 def inject_common():
     """Values available in every template."""
-    today = date.today()
+    today = datetime.now(APP_TIMEZONE).date()
     return {"today": today.isoformat(),
+            "now_time": datetime.now(APP_TIMEZONE).strftime("%H:%M"),
             "soon": (today + timedelta(days=3)).isoformat(),
             "STATUSES": STATUSES, "PRIORITIES": PRIORITIES, "TYPES": TYPES,
             "nickname": getattr(g, "nickname", None)}
@@ -74,6 +76,32 @@ def valid_time(text):
 def back(default):
     """Go back to the page the user came from (keeps search/filter settings)."""
     return redirect(request.referrer or url_for(default))
+
+
+def recipient_subject(conn, user_id, subject_name, description):
+    """Find or create the matching subject in the recipient's planner."""
+    subject = conn.execute(
+        "SELECT subject_id FROM subjects WHERE user_id = ? "
+        "AND LOWER(subject_name) = LOWER(?)",
+        (user_id, subject_name),
+    ).fetchone()
+    if subject:
+        return subject["subject_id"]
+
+    cursor = conn.execute(
+        "INSERT INTO subjects (subject_name, description, user_id) VALUES (?, ?, ?)",
+        (subject_name, description, user_id),
+    )
+    return cursor.lastrowid
+
+
+def find_share_recipient(conn, nickname):
+    if not nickname or len(nickname) > 30:
+        return None
+    return conn.execute(
+        "SELECT user_id, nickname FROM users WHERE nickname = ? COLLATE NOCASE",
+        (nickname,),
+    ).fetchone()
 
 
 # ---------------------------------------------------------------- Dashboard
@@ -140,19 +168,81 @@ def dashboard():
     ongoing = count("SELECT COUNT(*) " + owned_tasks + " AND t.status='Ongoing'")
     pending = count("SELECT COUNT(*) " + owned_tasks + " AND t.status='Pending'")
     percent = round(done / total * 100) if total else 0
-    upcoming = conn.execute(TASK_SELECT + "WHERE s.user_id = ? AND t.status != 'Completed' "
-                            "ORDER BY t.deadline LIMIT 5", (g.user_id,)).fetchall()
+    today = datetime.now(APP_TIMEZONE).date().isoformat()
+    now = datetime.now(APP_TIMEZONE)
+    now_time = now.strftime("%H:%M")
+    upcoming = conn.execute(
+        TASK_SELECT + "WHERE s.user_id = ? AND t.status != 'Completed' "
+        "AND (t.deadline > ? OR (t.deadline = ? AND t.deadline_time > ?)) "
+        "ORDER BY t.deadline, t.deadline_time LIMIT 5",
+        (g.user_id, today, today, now_time)).fetchall()
+    overdue = conn.execute(
+        TASK_SELECT + "WHERE s.user_id = ? AND t.status != 'Completed' "
+        "AND (t.deadline < ? OR (t.deadline = ? AND t.deadline_time <= ?)) "
+        "ORDER BY t.deadline DESC, t.deadline_time DESC LIMIT 5",
+        (g.user_id, today, today, now_time)).fetchall()
     recent = conn.execute(TASK_SELECT + "WHERE s.user_id = ? "
                           "ORDER BY t.task_id DESC LIMIT 5", (g.user_id,)).fetchall()
     sessions = conn.execute(
         "SELECT ss.*, s.subject_name FROM study_sessions ss JOIN subjects s "
-        "ON ss.subject_id = s.subject_id WHERE s.user_id = ? AND ss.study_date >= ? "
+        "ON ss.subject_id = s.subject_id WHERE s.user_id = ? "
+        "AND (ss.study_date > ? OR (ss.study_date = ? AND ss.end_time > ?)) "
         "ORDER BY ss.study_date, ss.start_time LIMIT 4",
-        (g.user_id, date.today().isoformat())).fetchall()
+        (g.user_id, now.date().isoformat(), now.date().isoformat(),
+         now.strftime("%H:%M"))).fetchall()
     conn.close()
     return render_template("dashboard.html", title="Dashboard", subjects=subjects, total=total,
                            done=done, ongoing=ongoing, pending=pending, percent=percent,
-                           upcoming=upcoming, recent=recent, sessions=sessions)
+                           upcoming=upcoming, overdue=overdue, recent=recent, sessions=sessions)
+
+
+@app.route("/api/reminders")
+def reminders():
+    now = datetime.now(APP_TIMEZONE)
+    today = now.date()
+    reminder_cutoff = now + timedelta(minutes=15)
+    conn = get_db()
+
+    due_tasks = conn.execute(
+        "SELECT t.task_id, t.task_title, t.deadline_time FROM tasks t "
+        "JOIN subjects s ON s.subject_id = t.subject_id "
+        "WHERE s.user_id = ? AND t.deadline = ? AND t.deadline_time > ? "
+        "AND t.status != 'Completed' "
+        "ORDER BY t.deadline, t.task_id",
+        (g.user_id, today.isoformat(), now.strftime("%H:%M")),
+    ).fetchall()
+    reminders_list = [
+        {
+            "id": f"task-{task['task_id']}-{today.isoformat()}",
+            "title": "Task due today",
+            "message": f"{task['task_title']} is due today at {task['deadline_time']}.",
+        }
+        for task in due_tasks
+    ]
+
+    session_rows = conn.execute(
+        "SELECT ss.session_id, ss.topic, ss.study_date, ss.start_time "
+        "FROM study_sessions ss JOIN subjects s ON s.subject_id = ss.subject_id "
+        "WHERE s.user_id = ? AND ss.study_date >= ? AND ss.study_date <= ? "
+        "ORDER BY ss.study_date, ss.start_time",
+        (g.user_id, today.isoformat(), reminder_cutoff.date().isoformat()),
+    ).fetchall()
+    conn.close()
+
+    for study_session in session_rows:
+        starts_at = datetime.combine(
+            date.fromisoformat(study_session["study_date"]),
+            datetime.strptime(study_session["start_time"], "%H:%M").time(),
+            APP_TIMEZONE,
+        )
+        if now < starts_at <= reminder_cutoff:
+            reminders_list.append({
+                "id": f"session-{study_session['session_id']}-{study_session['study_date']}",
+                "title": "Study session soon",
+                "message": f"{study_session['topic']} starts at {study_session['start_time']}.",
+            })
+
+    return jsonify(reminders=reminders_list)
 
 
 # ----------------------------------------------------------------- Subjects
@@ -238,8 +328,9 @@ def tasks():
     f = {key: request.args.get(key, "").strip()
          for key in ("q", "status", "subject", "priority", "type", "sort")}
     # Only these fixed strings are ever placed in the SQL (safe)
-    orders = {"deadline": "t.deadline ASC",
-              "priority": "CASE t.priority WHEN 'High' THEN 1 WHEN 'Medium' THEN 2 ELSE 3 END, t.deadline",
+    orders = {"deadline": "t.deadline ASC, t.deadline_time ASC",
+              "priority": "CASE t.priority WHEN 'High' THEN 1 WHEN 'Medium' THEN 2 ELSE 3 END, "
+                          "t.deadline, t.deadline_time",
               "newest": "t.task_id DESC"}
     conditions, params = ["s.user_id = ?"], [g.user_id]
     if f["q"]:  # search in title, description and subject name
@@ -271,6 +362,7 @@ def save_task(task_id=None):
     desc = form.get("task_description", "").strip()
     subject_id = form.get("subject_id", "").strip()
     deadline = form.get("deadline", "").strip()
+    deadline_time = form.get("deadline_time", "").strip()
     priority = form.get("priority", "Medium")
     status = form.get("status", "Pending")
     task_type = form.get("task_type", "Assignment")
@@ -284,6 +376,8 @@ def save_task(task_id=None):
         error = "Deadline is required."
     elif not valid_date(deadline):
         error = "Deadline must be a valid date."
+    elif not valid_time(deadline_time):
+        error = "Please enter a valid deadline time."
     elif priority not in PRIORITIES or status not in STATUSES or task_type not in TYPES:
         error = "Invalid priority, status or task type."
 
@@ -295,15 +389,16 @@ def save_task(task_id=None):
         flash(error, "danger")
     elif task_id is None:
         conn.execute("INSERT INTO tasks (subject_id, task_title, task_description, task_type, "
-                     "deadline, priority, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                     (subject_id, title, desc, task_type, deadline, priority, status,
+                     "deadline, deadline_time, priority, status, created_at) "
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                     (subject_id, title, desc, task_type, deadline, deadline_time, priority, status,
                       datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
         flash("Task added successfully!", "success")
     else:
         updated = conn.execute("UPDATE tasks SET subject_id=?, task_title=?, task_description=?, task_type=?, "
-                               "deadline=?, priority=?, status=? WHERE task_id=? AND subject_id IN "
+                               "deadline=?, deadline_time=?, priority=?, status=? WHERE task_id=? AND subject_id IN "
                                "(SELECT subject_id FROM subjects WHERE user_id=?)",
-                               (subject_id, title, desc, task_type, deadline, priority, status,
+                               (subject_id, title, desc, task_type, deadline, deadline_time, priority, status,
                                 task_id, g.user_id))
         flash("Task updated successfully!" if updated.rowcount else "Task not found.",
               "success" if updated.rowcount else "danger")
@@ -353,11 +448,54 @@ def delete_task(task_id):
     return back("tasks")
 
 
+@app.route("/tasks/<int:task_id>/share", methods=["POST"])
+def share_task(task_id):
+    nickname = request.form.get("nickname", "").strip()
+    conn = get_db()
+    task = conn.execute(
+        "SELECT t.*, s.subject_name, s.description FROM tasks t "
+        "JOIN subjects s ON t.subject_id = s.subject_id "
+        "WHERE t.task_id = ? AND s.user_id = ?",
+        (task_id, g.user_id),
+    ).fetchone()
+    if not task:
+        conn.close()
+        flash("Task not found.", "danger")
+        return back("tasks")
+
+    recipient = find_share_recipient(conn, nickname)
+    if not recipient:
+        conn.close()
+        flash("Nickname not found. The recipient must create a nickname first.", "danger")
+        return back("tasks")
+    if recipient["user_id"] == g.user_id:
+        conn.close()
+        flash("You cannot share a task with yourself.", "danger")
+        return back("tasks")
+
+    subject_id = recipient_subject(
+        conn, recipient["user_id"], task["subject_name"], task["description"]
+    )
+    conn.execute(
+        "INSERT INTO tasks (subject_id, task_title, task_description, task_type, "
+        "deadline, deadline_time, priority, status, created_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (subject_id, task["task_title"], task["task_description"], task["task_type"],
+         task["deadline"], task["deadline_time"], task["priority"], task["status"],
+         datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+    )
+    conn.commit()
+    conn.close()
+    flash(f"Task copied to {recipient['nickname']}'s planner.", "success")
+    return back("tasks")
+
+
 @app.route("/completed")
 def completed():
     conn = get_db()
     task_list = conn.execute(TASK_SELECT + "WHERE s.user_id = ? AND t.status='Completed' "
-                             "ORDER BY t.deadline DESC", (g.user_id,)).fetchall()
+                             "ORDER BY t.deadline DESC, t.deadline_time DESC",
+                             (g.user_id,)).fetchall()
     conn.close()
     return render_template("completed.html", title="Completed Tasks", task_list=task_list)
 
@@ -372,9 +510,24 @@ def schedule():
     subject_list = conn.execute("SELECT * FROM subjects WHERE user_id = ? ORDER BY subject_name",
                                 (g.user_id,)).fetchall()
     conn.close()
-    today = date.today().isoformat()
-    upcoming = [r for r in rows if r["study_date"] >= today]
-    past = [r for r in rows if r["study_date"] < today][::-1]  # newest first
+    now = datetime.now(APP_TIMEZONE)
+    upcoming = [
+        row for row in rows
+        if datetime.combine(
+            date.fromisoformat(row["study_date"]),
+            time.fromisoformat(row["end_time"]),
+            APP_TIMEZONE,
+        ) > now
+    ]
+    past = [
+        row for row in rows
+        if datetime.combine(
+            date.fromisoformat(row["study_date"]),
+            time.fromisoformat(row["end_time"]),
+            APP_TIMEZONE,
+        ) <= now
+    ]
+    past.sort(key=lambda row: (row["study_date"], row["end_time"]), reverse=True)
     return render_template("schedule.html", title="Study Schedule", upcoming=upcoming,
                            past=past, subject_list=subject_list)
 
@@ -443,6 +596,48 @@ def delete_session(session_id):
     conn.close()
     flash("Study session deleted." if deleted.rowcount else "Study session not found.",
           "success" if deleted.rowcount else "danger")
+    return redirect(url_for("schedule"))
+
+
+@app.route("/schedule/<int:session_id>/share", methods=["POST"])
+def share_session(session_id):
+    nickname = request.form.get("nickname", "").strip()
+    conn = get_db()
+    study_session = conn.execute(
+        "SELECT ss.*, s.subject_name, s.description FROM study_sessions ss "
+        "JOIN subjects s ON ss.subject_id = s.subject_id "
+        "WHERE ss.session_id = ? AND s.user_id = ?",
+        (session_id, g.user_id),
+    ).fetchone()
+    if not study_session:
+        conn.close()
+        flash("Study session not found.", "danger")
+        return redirect(url_for("schedule"))
+
+    recipient = find_share_recipient(conn, nickname)
+    if not recipient:
+        conn.close()
+        flash("Nickname not found. The recipient must create a nickname first.", "danger")
+        return redirect(url_for("schedule"))
+    if recipient["user_id"] == g.user_id:
+        conn.close()
+        flash("You cannot share a study session with yourself.", "danger")
+        return redirect(url_for("schedule"))
+
+    subject_id = recipient_subject(
+        conn, recipient["user_id"], study_session["subject_name"],
+        study_session["description"],
+    )
+    conn.execute(
+        "INSERT INTO study_sessions (subject_id, topic, study_date, start_time, "
+        "end_time, notes) VALUES (?, ?, ?, ?, ?, ?)",
+        (subject_id, study_session["topic"], study_session["study_date"],
+         study_session["start_time"], study_session["end_time"],
+         study_session["notes"]),
+    )
+    conn.commit()
+    conn.close()
+    flash(f"Study session copied to {recipient['nickname']}'s planner.", "success")
     return redirect(url_for("schedule"))
 
 

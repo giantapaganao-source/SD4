@@ -32,14 +32,30 @@
   <div class="card">
     <h3>Upcoming Deadlines</h3>
     {% for t in upcoming %}
-      {% set state = 'overdue' if t.deadline < today else ('soon' if t.deadline <= soon else 'ok') %}
+      {% set state = 'soon' if t.deadline <= soon else 'ok' %}
       <div class="deadline d-{{ state }}">
         <div><strong>{{ t.task_title }}</strong><small>{{ t.subject_name }} · {{ t.task_type }} · {{ t.status }}</small></div>
-        <span>{{ t.deadline }}{% if state == 'overdue' %} · Overdue{% endif %}</span>
+        <span>{{ t.deadline }}<br><small>{{ t.deadline_time }}</small></span>
       </div>
     {% else %}
       <p class="empty">No upcoming deadlines. 🎉</p>
     {% endfor %}
+  </div>
+  <div class="card">
+    <h3>Overdue Tasks</h3>
+    {% for t in overdue %}
+      <div class="deadline d-overdue">
+        <div><strong>{{ t.task_title }}</strong><small>{{ t.subject_name }} · {{ t.task_type }} · {{ t.status }}</small></div>
+        <span>{{ t.deadline }} {{ t.deadline_time }} · Overdue</span>
+      </div>
+    {% else %}
+      <p class="empty">No overdue tasks. 🎉</p>
+    {% endfor %}
+  </div>
+  <div class="card clock-card">
+    <h3>{{ icon('clock', 20) }} Current Time</h3>
+    <time class="dashboard-clock" id="dashboardClock">--:--:--</time>
+    <p class="muted" id="dashboardClockDate">Loading local date…</p>
   </div>
 </section>
 

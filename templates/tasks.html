@@ -43,11 +43,22 @@
         <select name="subject_id" required><option value="">-- Select --</option>
           {% for s in subject_list %}<option value="{{ s.subject_id }}">{{ s.subject_name }}</option>{% endfor %}</select></div>
       <div><label>Task type</label><select name="task_type">{% for t in TYPES %}<option>{{ t }}</option>{% endfor %}</select></div>
-      <div><label>Deadline *</label><input type="date" name="deadline" required></div>
+      <div><label>Deadline date *</label><input type="date" name="deadline" required></div>
+      <div><label>Deadline time *</label><input type="time" name="deadline_time" required></div>
       <div><label>Priority</label><select name="priority">{% for p in PRIORITIES %}<option {{ 'selected' if p == 'Medium' }}>{{ p }}</option>{% endfor %}</select></div>
     </div>
     <label>Status</label><select name="status">{% for s in STATUSES %}<option>{{ s }}</option>{% endfor %}</select>
     <div class="modal-actions"><button type="button" class="btn btn-light" data-close>Cancel</button><button class="btn">Save Task</button></div>
+  </form>
+</div></div>
+
+<div class="modal" id="shareModal"><div class="modal-box">
+  <h2>Share Task</h2>
+  <p class="muted">This creates a separate copy in the recipient's planner. Their nickname must already exist.</p>
+  <form method="post">
+    <label for="shareTaskNickname">Recipient nickname</label>
+    <input id="shareTaskNickname" type="text" name="nickname" maxlength="30" required autocomplete="off">
+    <div class="modal-actions"><button type="button" class="btn btn-light" data-close>Cancel</button><button class="btn">Share Task</button></div>
   </form>
 </div></div>
 {% endblock %}

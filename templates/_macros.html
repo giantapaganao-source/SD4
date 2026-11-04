@@ -8,11 +8,11 @@
   <tbody>
   {% for t in task_list %}
     {# state decides the row colour: done / overdue / soon / ok #}
-    {% set state = 'done' if t.status == 'Completed' else ('overdue' if t.deadline < today else ('soon' if t.deadline <= soon else 'ok')) %}
+    {% set state = 'done' if t.status == 'Completed' else ('overdue' if t.deadline < today or (t.deadline == today and t.deadline_time <= now_time) else ('soon' if t.deadline <= soon else 'ok')) %}
     <tr class="row-{{ state }}">
       <td><strong>{{ t.task_title }}</strong><small>{{ t.task_type }}{% if t.task_description %} · {{ t.task_description }}{% endif %}</small></td>
       <td>{{ t.subject_name }}</td>
-      <td>{{ t.deadline }}</td>
+      <td>{{ t.deadline }}<small>{{ t.deadline_time }}</small></td>
       <td><span class="badge p-{{ t.priority|lower }}">{{ t.priority }}</span></td>
       <td><span class="badge s-{{ 'ongoing' if state == 'ok' and t.status == 'Ongoing' else state }}">{{ {'done':'Completed','overdue':'Overdue','soon':'Due Soon'}[state] if state != 'ok' else t.status }}</span>
           {% if state == 'overdue' and t.status == 'Ongoing' %}<small>Ongoing</small>{% endif %}</td>
@@ -26,8 +26,10 @@
         <button type="button" class="btn btn-sm btn-light" data-modal="taskModal" data-heading="Edit Task"
           data-action="{{ url_for('edit_task', task_id=t.task_id) }}" data-task_title="{{ t.task_title }}"
           data-task_description="{{ t.task_description or '' }}" data-subject_id="{{ t.subject_id }}"
-          data-deadline="{{ t.deadline }}" data-priority="{{ t.priority }}"
+          data-deadline="{{ t.deadline }}" data-deadline_time="{{ t.deadline_time }}" data-priority="{{ t.priority }}"
           data-status="{{ t.status }}" data-task_type="{{ t.task_type }}">{{ icon('pencil', 14) }} Edit</button>
+        <button type="button" class="btn btn-sm btn-light" data-modal="shareModal" data-heading="Share Task"
+          data-action="{{ url_for('share_task', task_id=t.task_id) }}">{{ icon('share', 14) }} Share</button>
         {% endif %}
         <form method="post" action="{{ url_for('delete_task', task_id=t.task_id) }}"
               onsubmit="return confirm('Delete this task?')">

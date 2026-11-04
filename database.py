@@ -131,6 +131,7 @@ def init_db():
             task_description TEXT,
             task_type        TEXT NOT NULL DEFAULT 'Assignment',
             deadline         TEXT NOT NULL,
+            deadline_time    TEXT NOT NULL DEFAULT '23:59',
             priority         TEXT NOT NULL DEFAULT 'Medium',
             status           TEXT NOT NULL DEFAULT 'Pending',
             created_at       TEXT NOT NULL,
@@ -154,6 +155,10 @@ def init_db():
     columns = [row["name"] for row in conn.execute("PRAGMA table_info(tasks)")]
     if "task_type" not in columns:
         conn.execute("ALTER TABLE tasks ADD COLUMN task_type TEXT NOT NULL DEFAULT 'Assignment'")
+    if "deadline_time" not in columns:
+        conn.execute(
+            "ALTER TABLE tasks ADD COLUMN deadline_time TEXT NOT NULL DEFAULT '23:59'"
+        )
     columns = [row["name"] for row in conn.execute("PRAGMA table_info(subjects)")]
     if "user_id" not in columns:
         conn.execute("ALTER TABLE subjects ADD COLUMN user_id INTEGER REFERENCES users (user_id)")
