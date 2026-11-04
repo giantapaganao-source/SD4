@@ -48,9 +48,7 @@ def load_user():
             session.clear()
             g.user_id = None
 
-    if request.endpoint and request.endpoint not in {
-        "home", "welcome", "register", "logout", "static"
-    }:
+    if request.endpoint and request.endpoint not in {"home", "welcome", "register", "static"}:
         if g.user_id is None:
             return redirect(url_for("register"))
 
@@ -127,13 +125,6 @@ def register():
         session["user_id"] = cursor.lastrowid
         return redirect(url_for("dashboard"))
     return render_template("welcome.html", register_mode=True)
-
-
-@app.route("/logout", methods=["POST"])
-def logout():
-    session.clear()
-    flash("You have been logged out. Choose a nickname to continue.", "success")
-    return redirect(url_for("register"))
 
 
 @app.route("/dashboard")

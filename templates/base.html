@@ -20,9 +20,7 @@
         <a href="{{ url_for(ep) }}" class="{{ 'active' if request.endpoint == ep }}">{{ icon(ic, 18) }} {{ label }}</a>
       {% endfor %}
     </nav>
-    <form class="side-logout" method="post" action="{{ url_for('logout') }}">
-      <button class="side-cta" type="submit">{{ icon('logout', 18) }} Log out</button>
-    </form>
+    <a class="side-cta" href="{{ url_for('welcome') }}">{{ icon('cap', 18) }} Get Started Guide</a>
   </aside>
 
   <main class="main">
