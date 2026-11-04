@@ -142,6 +142,8 @@ label { font-size: .85rem; font-weight: 600; display: block; margin-bottom: 4px;
 .w-hero h1 span { color: var(--primary); }
 .w-hero p { color: var(--muted); font-size: 1.15rem; max-width: 580px; margin: 0 auto 30px; }
 .w-cta { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.nickname-form { max-width: 420px; margin: 0 auto; text-align: left; }
+.nickname-form .w-cta { margin-top: 8px; }
 .w-tiles { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-top: 56px; }
 .tile { width: 92px; height: 92px; border-radius: 24px; display: flex; align-items: center; justify-content: center;
         box-shadow: 0 8px 20px rgba(0,0,0,.08); animation: float 4s ease-in-out infinite; }

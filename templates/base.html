@@ -24,7 +24,7 @@
   </aside>
 
   <main class="main">
-    <header class="topbar"><h1>{{ title }}</h1><span class="today">{{ icon('calendar', 16) }} {{ today }}</span></header>
+    <header class="topbar"><h1>{{ title }}</h1><span class="today">{{ icon('calendar', 16) }} {{ today }}{% if nickname %} · {{ nickname }}{% endif %}</span></header>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% for category, message in messages %}

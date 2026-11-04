@@ -19,10 +19,15 @@ def init_db():
     """Create the tables if they do not exist yet (runs on every start)."""
     conn = get_db()
     conn.executescript("""
+        CREATE TABLE IF NOT EXISTS users (
+            user_id   INTEGER PRIMARY KEY AUTOINCREMENT,
+            nickname  TEXT NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS subjects (
             subject_id   INTEGER PRIMARY KEY AUTOINCREMENT,
             subject_name TEXT NOT NULL,
-            description  TEXT
+            description  TEXT,
+            user_id      INTEGER REFERENCES users (user_id)
         );
         CREATE TABLE IF NOT EXISTS tasks (
             task_id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -51,5 +56,11 @@ def init_db():
     columns = [row["name"] for row in conn.execute("PRAGMA table_info(tasks)")]
     if "task_type" not in columns:
         conn.execute("ALTER TABLE tasks ADD COLUMN task_type TEXT NOT NULL DEFAULT 'Assignment'")
+    columns = [row["name"] for row in conn.execute("PRAGMA table_info(subjects)")]
+    if "user_id" not in columns:
+        conn.execute("ALTER TABLE subjects ADD COLUMN user_id INTEGER REFERENCES users (user_id)")
+    conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS users_nickname_unique "
+                 "ON users (nickname COLLATE NOCASE)")
+    conn.execute("CREATE INDEX IF NOT EXISTS subjects_user_id ON subjects (user_id)")
     conn.commit()
     conn.close()

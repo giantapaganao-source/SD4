@@ -11,17 +11,45 @@
 <body class="welcome">
 <header class="w-nav">
   <a class="w-brand" href="{{ url_for('welcome') }}"><img src="{{ url_for('static', filename='img/logo.svg') }}" alt="" width="40" height="40"> StudyBuddy</a>
+  {% if nickname %}
   <a class="btn-pill ghost" href="{{ url_for('dashboard') }}">{{ icon('home', 16) }} Dashboard</a>
+  {% else %}
+  <a class="btn-pill ghost" href="{{ url_for('register') }}">Get started</a>
+  {% endif %}
 </header>
 
+{% if register_mode|default(false) %}
+<section class="w-hero">
+  <span class="w-tag">{{ icon('cap', 16) }} Your personal study planner</span>
+  <h1>Choose your<br><span>nickname.</span></h1>
+  <p>Use one unique nickname for your personal study planner.</p>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+  <form method="post" action="{{ url_for('register') }}" class="nickname-form">
+    <label for="nickname">Nickname</label>
+    <input id="nickname" type="text" name="nickname" maxlength="30" autocomplete="nickname" required autofocus>
+    <div class="w-cta">
+      <button class="btn-pill" type="submit">Continue {{ icon('arrow', 18) }}</button>
+      <a class="btn-pill ghost" href="{{ url_for('home') }}">Back</a>
+    </div>
+  </form>
+</section>
+{% else %}
 <!-- Hero -->
 <section class="w-hero">
   <span class="w-tag">{{ icon('cap', 16) }} Your personal study planner</span>
   <h1>Plan your studies.<br><span>Not your stress.</span></h1>
   <p>Keep every subject, assignment, quiz and exam in one place, see what is due next, and plan your study time.</p>
   <div class="w-cta">
-    <a class="btn-pill" href="{{ url_for('subjects') }}">Get started {{ icon('arrow', 18) }}</a>
+    <a class="btn-pill" href="{{ url_for('register') }}">Get started {{ icon('arrow', 18) }}</a>
+    {% if nickname %}
     <a class="btn-pill ghost" href="{{ url_for('dashboard') }}">View dashboard</a>
+    {% else %}
+    <a class="btn-pill ghost" href="{{ url_for('register') }}">Choose a nickname</a>
+    {% endif %}
   </div>
   <div class="w-tiles">
     <div class="tile t1">{{ icon('book', 34) }}</div><div class="tile t2">{{ icon('cap', 34) }}</div>
@@ -63,8 +91,9 @@
 
 <section class="w-final">
   <h2>Ready to get organized?</h2>
-  <a class="btn-pill light" href="{{ url_for('subjects') }}">Get started {{ icon('arrow', 18) }}</a>
+  <a class="btn-pill light" href="{{ url_for('register') }}">Get started {{ icon('arrow', 18) }}</a>
 </section>
 <footer class="w-foot">StudyBuddy · Personal Study Planner and Task Tracker</footer>
+{% endif %}
 </body>
 </html>
